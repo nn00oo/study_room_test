@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en-GB" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StudySpace – book a quiet study room</title>
+<!-- Bulma v1 from its official CDN -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.min.css">
+<style>
+  /* Small layout adjustments only */
+  [hidden]{display:none!important}
+  :focus-visible{outline:3px solid #1d4ed8!important;outline-offset:2px}
+  .wrap{max-width:640px;margin:0 auto}
+  .photo{height:150px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600}
+  .c0{background:#34517f}.c1{background:#2b6455}.c2{background:#74456a}
+  #toast{position:fixed;top:4.5rem;left:1rem;right:1rem;z-index:50;max-width:420px;margin:0 auto}
+  main{min-height:70vh}
+</style>
+</head>
+<body>
+
+<!-- ============ GLOBAL: NAVBAR ============ -->
+<nav class="navbar is-light" aria-label="Main">
+  <div class="navbar-brand">
+    <a class="navbar-item has-text-weight-bold" href="#" data-go="home">StudySpace</a>
+    <button class="navbar-burger" id="burger" aria-label="Menu" aria-expanded="false" aria-controls="menu" type="button">
+      <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
+    </button>
+  </div>
+  <div class="navbar-menu" id="menu">
+    <div class="navbar-end">
+      <a class="navbar-item" href="#" data-go="home">Home</a>
+      <a class="navbar-item" href="#" data-go="bookings">My bookings</a>
+      <a class="navbar-item" href="#" data-stub>Help</a>
+      <a class="navbar-item" href="#" data-stub>Account</a>
+    </div>
+  </div>
+</nav>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<main>
+
+<!-- ============ SCREEN 1: HOME ============ -->
+<section class="section screen" id="s-home">
+  <div class="wrap">
+    <h1 class="title" tabindex="-1">Find a quiet study room</h1>
+    <p class="subtitle is-6">Short on time between lectures? Search for a free room on campus.</p>
+    <form class="box" id="searchForm" novalidate>
+      <h2 class="title is-5">Quick search</h2>
+      <div class="field">
+        <label class="label" for="date">Date</label>
+        <div class="control"><input class="input" type="date" id="date" required></div>
+        <p class="help is-danger" id="err-date" role="alert"></p>
+      </div>
+      <div class="columns is-mobile">
+        <div class="column"><div class="field">
+          <label class="label" for="start">From</label>
+          <div class="control"><div class="select is-fullwidth"><select id="start"></select></div></div>
+        </div></div>
+        <div class="column"><div class="field">
+          <label class="label" for="end">To</label>
+          <div class="control"><div class="select is-fullwidth"><select id="end"></select></div></div>
+        </div></div>
+      </div>
+      <p class="help is-danger mb-3" id="err-time" role="alert"></p>
+      <div class="field">
+        <label class="label" for="size">Group size (1–10 people)</label>
+        <div class="field has-addons">
+          <div class="control"><button class="button" type="button" id="minus" aria-label="Fewer people">−</button></div>
+          <div class="control is-expanded"><input class="input has-text-centered" type="number" id="size" min="1" max="10" required></div>
+          <div class="control"><button class="button" type="button" id="plus" aria-label="More people">+</button></div>
+        </div>
+        <p class="help is-danger" id="err-size" role="alert"></p>
+      </div>
+      <button class="button is-link is-fullwidth" type="submit">Search rooms</button>
+    </form>
+  </div>
+</section>
+
+<!-- ============ SCREEN 2: RESULTS ============ -->
+<section class="section screen" id="s-results" hidden>
+  <div class="wrap">
+    <button class="button is-small mb-4" type="button" data-go="home">← Change search</button>
+    <h1 class="title" tabindex="-1">Available rooms</h1>
+    <p class="subtitle is-6" id="summary"></p>
+    <details class="box" id="filters">
+      <summary class="has-text-weight-semibold">Filters</summary>
+      <fieldset class="field mt-3"><legend class="label">Building</legend><div id="fBuilding"></div></fieldset>
+      <fieldset class="field"><legend class="label">Facilities</legend><div id="fFac"></div></fieldset>
+    </details>
+    <p id="count" class="mb-3" aria-live="polite"></p>
+    <div id="list"></div>
+  </div>
+</section>
+
+<!-- ============ SCREEN 3: ROOM DETAILS ============ -->
+<section class="section screen" id="s-details" hidden>
+  <div class="wrap">
+    <button class="button is-small mb-4" type="button" data-go="results">← Back to results</button>
+    <div id="detailsBody"></div>
+  </div>
+</section>
+
+<!-- ============ SCREEN 4: CONFIRM BOOKING ============ -->
+<section class="section screen" id="s-confirm" hidden>
+  <div class="wrap">
+    <h1 class="title" tabindex="-1">Confirm your booking</h1>
+    <div class="box" id="confirmSummary"></div>
+    <form class="box" id="confirmForm" novalidate>
+      <h2 class="title is-5">Your details</h2>
+      <div class="notification is-danger is-light" id="formErr" role="alert" hidden>Please fix the problems below before confirming.</div>
+      <div class="field">
+        <label class="label" for="name">Full name</label>
+        <div class="control"><input class="input" id="name" autocomplete="name" required aria-describedby="err-name"></div>
+        <p class="help is-danger" id="err-name"></p>
+      </div>
+      <div class="field">
+        <label class="label" for="email">University email</label>
+        <div class="control"><input class="input" id="email" type="email" autocomplete="email" required aria-describedby="hint-email err-email"></div>
+        <p class="help" id="hint-email">For example: a.student@campus.example.ac.uk</p>
+        <p class="help is-danger" id="err-email"></p>
+      </div>
+      <div class="buttons">
+        <button class="button is-link" type="submit">Confirm booking</button>
+        <button class="button" type="button" data-go="details">Change details</button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<!-- ============ SCREEN 5: SUCCESS ============ -->
+<section class="section screen" id="s-success" hidden>
+  <div class="wrap">
+    <h1 class="title" tabindex="-1">Room booked</h1>
+    <div class="notification is-success is-light">
+      <p>Your booking reference is <strong id="ref"></strong>. Keep it handy – you may need it at the door.</p>
+    </div>
+    <div class="box" id="successSummary"></div>
+    <div class="buttons">
+      <button class="button is-link" type="button" data-go="bookings">View my bookings</button>
+      <button class="button" type="button" data-go="home">Book another room</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SCREEN 6: MY BOOKINGS ============ -->
+<section class="section screen" id="s-bookings" hidden>
+  <div class="wrap">
+    <h1 class="title" tabindex="-1">My bookings</h1>
+    <div id="bookList"></div>
+    <button class="button is-link mt-3" type="button" data-go="home">Book a room</button>
+  </div>
+</section>
+
+</main>
+
+<!-- ============ CANCEL CONFIRMATION MODAL ============ -->
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal-background"></div>
+  <div class="modal-card">
+    <header class="modal-card-head"><h2 class="modal-card-title" id="modalTitle">Cancel this booking?</h2></header>
+    <section class="modal-card-body" id="modalBody"></section>
+    <footer class="modal-card-foot">
+      <button class="button is-danger" type="button" id="yesCancel">Yes, cancel booking</button>
+      <button class="button" type="button" id="noCancel">Keep booking</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ============ GLOBAL: FOOTER ============ -->
+<footer class="footer py-5">
+  <div class="content has-text-centered is-size-7">
+    <p>StudySpace prototype · fake data only ·
+      <a href="#" id="reset">Reset prototype</a></p>
+  </div>
+</footer>
+
+<script>
+/* ---------- Fake in-memory data ---------- */
+const pad = n => String(n).padStart(2, '0');
+const isoDate = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const today = new Date(); const tmr = new Date(Date.now() + 864e5);
+const TOMORROW = isoDate(tmr), TODAY = isoDate(today);
+const FAC = ['Whiteboard', 'Screen', 'Power sockets', 'Step-free access'];
+const rooms = [
+  {id:'H1', name:'Quiet Pod 1.01', b:'Hartley Library', cap:2, fac:['Power sockets'], note:'A small pod for solo or paired study.'},
+  {id:'H2', name:'Study Room 1.04', b:'Hartley Library', cap:4, fac:['Whiteboard','Power sockets','Step-free access'], note:'Bright room by the first-floor quiet zone.'},
+  {id:'H3', name:'Study Room 2.02', b:'Hartley Library', cap:6, fac:['Whiteboard','Screen','Power sockets'], note:'Good for group revision with a wall-mounted screen.'},
+  {id:'H4', name:'Group Room 2.10', b:'Hartley Library', cap:10, fac:['Whiteboard','Screen','Power sockets','Step-free access'], note:'Our largest room, ideal for project meetings.'},
+  {id:'M1', name:'Room G.03', b:'Marlow Building', cap:4, fac:['Power sockets','Step-free access'], note:'Ground-floor room close to the main entrance.'},
+  {id:'M2', name:'Room 1.07', b:'Marlow Building', cap:4, fac:['Whiteboard','Power sockets'], note:'Quiet corner room with plenty of natural light.'},
+  {id:'M3', name:'Room 2.01', b:'Marlow Building', cap:8, fac:['Whiteboard','Screen','Power sockets'], note:'Long table and a screen for presentations.'},
+  {id:'R1', name:'Pod A', b:'Riverside Hub', cap:2, fac:['Power sockets','Step-free access'], note:'Compact pod overlooking the canal.'},
+  {id:'R2', name:'Room 1.2', b:'Riverside Hub', cap:4, fac:['Whiteboard','Screen'], note:'Calm room with a screen and whiteboard.'},
+  {id:'R3', name:'Room 2.5', b:'Riverside Hub', cap:6, fac:['Whiteboard','Power sockets','Step-free access'], note:'Spacious first-come favourite for small teams.'}
+];
+const buildings = [...new Set(rooms.map(r => r.b))];
+const seeded = [ // already booked tomorrow afternoon
+  {room:'H2', date:TOMORROW, start:14, end:16}, {room:'M1', date:TOMORROW, start:15, end:17},
+  {room:'M3', date:TOMORROW, start:13, end:18}, {room:'R2', date:TOMORROW, start:12, end:16},
+  {room:'H1', date:TOMORROW, start:14, end:15}, {room:'R1', date:TOMORROW, start:14, end:16}
+];
+
+/* ---------- State ---------- */
+let S, $ = id => document.getElementById(id);
+const fmtT = h => pad(h) + ':00';
+const fmtD = iso => new Date(iso + 'T12:00:00').toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long'});
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const overlap = (a, b) => a.date === b.date && a.start < b.end && a.end > b.start;
+const isBooked = r => [...seeded, ...S.bookings].some(b => b.room === r.id && overlap(b, S.search));
+const roomById = id => rooms.find(r => r.id === id);
+const colour = r => 'c' + (buildings.indexOf(r.b));
+
+function initState() {
+  S = {search:null, b:new Set(), f:new Set(), room:null, bookings:[], cancelRef:null};
+  $('date').value = TOMORROW; $('date').min = TODAY;
+  $('start').value = 14; $('end').value = 15; $('size').value = 2;
+  ['name','email'].forEach(i => $(i).value = '');
+  document.querySelectorAll('#filters input').forEach(i => i.checked = false);
+  document.querySelectorAll('.help.is-danger').forEach(e => e.textContent = '');
+  $('formErr').hidden = true; $('modal').classList.remove('is-active');
+}
+
+/* ---------- Navigation ---------- */
+function show(name) {
+  document.querySelectorAll('.screen').forEach(s => s.hidden = true);
+  $('s-' + name).hidden = false;
+  if (name === 'results') renderResults();
+  if (name === 'details') renderDetails();
+  if (name === 'confirm') renderConfirm();
+  if (name === 'bookings') renderBookings();
+  $('menu').classList.remove('is-active'); $('burger').classList.remove('is-active'); $('burger').setAttribute('aria-expanded', 'false');
+  window.scrollTo(0, 0);
+  $('s-' + name).querySelector('h1').focus();
+}
+function toast(msg) {
+  $('toast').innerHTML = '<div class="notification is-warning">' + msg + '</div>';
+  clearTimeout(toast.t); toast.t = setTimeout(() => $('toast').innerHTML = '', 4000);
+}
+document.addEventListener('click', e => {
+  const g = e.target.closest('[data-go]');
+  if (g) { e.preventDefault(); show(g.dataset.go); return; }
+  if (e.target.closest('[data-stub]')) { e.preventDefault(); toast("This part isn't in the prototype yet."); }
+});
+$('burger').onclick = () => {
+  const on = $('menu').classList.toggle('is-active');
+  $('burger').classList.toggle('is-active', on); $('burger').setAttribute('aria-expanded', on);
+};
+$('reset').onclick = e => { e.preventDefault(); initState(); show('home'); };
+
+/* ---------- Screen 1: search ---------- */
+for (let h = 8; h <= 21; h++) {
+  if (h < 21) $('start').add(new Option(fmtT(h), h));
+  if (h > 8) $('end').add(new Option(fmtT(h), h));
+}
+$('minus').onclick = () => $('size').value = Math.max(1, (+$('size').value || 2) - 1);
+$('plus').onclick = () => $('size').value = Math.min(10, (+$('size').value || 0) + 1);
+$('searchForm').onsubmit = e => {
+  e.preventDefault();
+  const date = $('date').value, start = +$('start').value, end = +$('end').value, size = +$('size').value;
+  let ok = true;
+  $('err-date').textContent = !date ? 'Choose a date.' : date < TODAY ? 'Choose today or a future date.' : '';
+  $('err-time').textContent = end <= start ? 'The end time must be after the start time.' : '';
+  $('err-size').textContent = !(size >= 1 && size <= 10) ? 'Enter a group size between 1 and 10.' : '';
+  if ($('err-date').textContent || $('err-time').textContent || $('err-size').textContent) {
+    document.querySelector('#searchForm .help.is-danger:not(:empty)').previousElementSibling?.querySelector?.('input,select')?.focus();
+    return;
+  }
+  S.search = {date, start, end, size}; show('results');
+};
+
+/* ---------- Screen 2: results ---------- */
+function checkbox(group, val) {
+  const id = 'cb-' + group + '-' + val.replace(/\W/g, '');
+  return '<label class="checkbox is-block mb-2" for="' + id + '"><input type="checkbox" id="' + id + '" data-g="' + group + '" value="' + esc(val) + '"> ' + esc(val) + '</label>';
+}
+$('fBuilding').innerHTML = buildings.map(b => checkbox('b', b)).join('');
+$('fFac').innerHTML = FAC.map(f => checkbox('f', f)).join('');
+$('filters').addEventListener('change', e => {
+  const set = S[e.target.dataset.g];
+  e.target.checked ? set.add(e.target.value) : set.delete(e.target.value);
+  renderResults();
+});
+function renderResults() {
+  const q = S.search;
+  $('summary').textContent = fmtD(q.date) + ' · ' + fmtT(q.start) + '–' + fmtT(q.end) + ' · ' + q.size + (q.size === 1 ? ' person' : ' people');
+  const list = rooms.filter(r => r.cap >= q.size && (!S.b.size || S.b.has(r.b)) && [...S.f].every(f => r.fac.includes(f)));
+  const free = list.filter(r => !isBooked(r)).length;
+  $('count').textContent = list.length ? free + ' available, ' + (list.length - free) + ' already booked for your time.' : '';
+  $('list').innerHTML = list.length ? list.map(r => {
+    const booked = isBooked(r);
+    return '<div class="card mb-3"><div class="card-content">' +
+      '<h2 class="title is-5 mb-2">' + esc(r.name) + '</h2>' +
+      '<div class="tags mb-3"><span class="tag is-info is-light">' + esc(r.b) + '</span><span class="tag">Up to ' + r.cap + ' people</span>' +
+      (booked ? '<span class="tag is-danger is-light">Booked</span>' : '<span class="tag is-success is-light">Available</span>') + '</div>' +
+      '<p class="is-size-7 mb-3">' + r.fac.map(esc).join(' · ') + '</p>' +
+      (booked ? '<p class="is-size-7">Not available at your chosen time.</p>'
+              : '<button class="button is-link is-small" type="button" data-room="' + r.id + '" aria-label="View ' + esc(r.name) + ', ' + esc(r.b) + '">View room</button>') +
+      '</div></div>';
+  }).join('') : '<div class="notification is-warning is-light">No rooms match your search and filters. Try removing a filter, or <a href="#" data-go="home">change your search</a>.</div>';
+}
+$('list').addEventListener('click', e => {
+  const b = e.target.closest('[data-room]'); if (b) { S.room = b.dataset.room; show('details'); }
+});
+
+/* ---------- Screen 3: details ---------- */
+function summaryHtml(r) {
+  const q = S.search;
+  return '<p><strong>' + esc(r.name) + '</strong>, ' + esc(r.b) + '</p><p>' + fmtD(q.date) + '</p><p>' + fmtT(q.start) + '–' + fmtT(q.end) + '</p><p>' + q.size + (q.size === 1 ? ' person' : ' people') + '</p>';
+}
+function renderDetails() {
+  const r = roomById(S.room);
+  $('detailsBody').innerHTML =
+    '<div class="photo ' + colour(r) + ' mb-4" role="img" aria-label="Photo placeholder for ' + esc(r.name) + '">Photo placeholder</div>' +
+    '<h1 class="title" tabindex="-1">' + esc(r.name) + '</h1>' +
+    '<p class="subtitle is-6">' + esc(r.b) + ' · up to ' + r.cap + ' people</p>' +
+    '<p class="mb-4">' + esc(r.note) + '</p>' +
+    '<h2 class="title is-5">Facilities</h2><div class="tags mb-4">' + r.fac.map(f => '<span class="tag is-medium">' + esc(f) + '</span>').join('') + '</div>' +
+    '<h2 class="title is-5">Your booking</h2><div class="box">' + summaryHtml(r) + '</div>' +
+    '<div class="buttons"><button class="button is-link" type="button" id="bookBtn">Book this room</button>' +
+    '<button class="button" type="button" data-stub>Share this room</button></div>';
+  $('bookBtn').onclick = () => show('confirm');
+}
+
+/* ---------- Screen 4: confirm ---------- */
+function renderConfirm() {
+  $('confirmSummary').innerHTML = '<h2 class="title is-5">Booking summary</h2>' + summaryHtml(roomById(S.room));
+  $('formErr').hidden = true;
+  ['name', 'email'].forEach(i => { $('err-' + i).textContent = ''; $(i).classList.remove('is-danger'); $(i).removeAttribute('aria-invalid'); });
+}
+$('confirmForm').onsubmit = e => {
+  e.preventDefault();
+  const name = $('name').value.trim(), email = $('email').value.trim();
+  const errs = {
+    name: name ? '' : 'Enter your full name.',
+    email: !email ? 'Enter your university email address.' : !/^\S+@\S+\.\S+$/.test(email) ? 'Enter an email address in the format name@campus.example.ac.uk.' : ''
+  };
+  let first = null;
+  ['name', 'email'].forEach(i => {
+    $('err-' + i).textContent = errs[i]; $(i).classList.toggle('is-danger', !!errs[i]);
+    errs[i] ? $(i).setAttribute('aria-invalid', 'true') : $(i).removeAttribute('aria-invalid');
+    if (errs[i] && !first) first = $(i);
+  });
+  $('formErr').hidden = !first;
+  if (first) { first.focus(); return; }
+  const r = roomById(S.room);
+  if (isBooked(r)) { toast('Sorry, that room has just been booked. Please choose another.'); show('results'); return; }
+  const ref = 'SR-' + (1000 + Math.floor(Math.random() * 9000)) + String.fromCharCode(65 + Math.floor(Math.random() * 26));
+  S.bookings.push({ref, room:r.id, name, email, ...S.search});
+  $('ref').textContent = ref;
+  $('successSummary').innerHTML = '<h2 class="title is-5">Booking details</h2>' + summaryHtml(r) + '<p>Booked for ' + esc(name) + '</p>';
+  show('success');
+};
+
+/* ---------- Screen 6: my bookings ---------- */
+function renderBookings() {
+  $('bookList').innerHTML = S.bookings.length ? S.bookings.map(b => {
+    const r = roomById(b.room);
+    return '<div class="card mb-3"><div class="card-content">' +
+      '<h2 class="title is-5 mb-2">' + esc(r.name) + ', ' + esc(r.b) + '</h2>' +
+      '<p>' + fmtD(b.date) + ' · ' + fmtT(b.start) + '–' + fmtT(b.end) + '</p>' +
+      '<p class="mb-3">' + b.size + (b.size === 1 ? ' person' : ' people') + '</p>' +
+      '<div class="tags"><span class="tag is-success is-light">Confirmed</span><span class="tag">Ref ' + esc(b.ref) + '</span></div>' +
+      '<button class="button is-danger is-outlined is-small" type="button" data-cancel="' + esc(b.ref) + '">Cancel booking <span class="is-sr-only">' + esc(b.ref) + '</span></button>' +
+      '</div></div>';
+  }).join('') : '<div class="notification is-light">You have no bookings yet.</div>';
+}
+$('bookList').addEventListener('click', e => {
+  const c = e.target.closest('[data-cancel]'); if (!c) return;
+  S.cancelRef = c.dataset.cancel;
+  const b = S.bookings.find(x => x.ref === S.cancelRef), r = roomById(b.room);
+  $('modalBody').textContent = r.name + ', ' + fmtD(b.date) + ', ' + fmtT(b.start) + '–' + fmtT(b.end) + ' (' + b.ref + ').';
+  $('modal').classList.add('is-active'); $('noCancel').focus();
+});
+const closeModal = () => $('modal').classList.remove('is-active');
+$('noCancel').onclick = closeModal;
+$('modal').querySelector('.modal-background').onclick = closeModal;
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+$('yesCancel').onclick = () => {
+  S.bookings = S.bookings.filter(b => b.ref !== S.cancelRef);
+  closeModal(); renderBookings(); toast('Booking cancelled.');
+  $('s-bookings').querySelector('h1').focus();
+};
+
+/* ---------- Start ---------- */
+initState(); show('home');
+</script>
+</body>
+</html>
